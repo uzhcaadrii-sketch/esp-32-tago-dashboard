@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <script src="https://admin.tago.io/dist/custom-widget.sdk.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .semaforo { background: #333; padding: 30px; border-radius: 30px; border: 4px solid #444; display: flex; flex-direction: column; gap: 20px; }
-        .luz { width: 70px; height: 70px; border-radius: 50%; background: #111; transition: 0.3s; }
-        .rojo.active { background: #ff0000; box-shadow: 0 0 30px #ff0000; }
-        .amarillo.active { background: #ffcc00; box-shadow: 0 0 30px #ffcc00; }
-        .verde.active { background: #00ff00; box-shadow: 0 0 30px #00ff00; }
+        body { background: #1a1a1a; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .semaforo { background: #222; padding: 30px; border-radius: 40px; border: 4px solid #444; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 0 50px rgba(0,0,0,0.7); }
+        .luz { width: 80px; height: 80px; border-radius: 50%; background: #111; transition: 0.5s; border: 2px solid rgba(255,255,255,0.05); }
+        /* Clases de activación */
+        .rojo.active { background: #ff0000; box-shadow: 0 0 40px #ff0000; }
+        .amarillo.active { background: #ffcc00; box-shadow: 0 0 40px #ffcc00; }
+        .verde.active { background: #00ff00; box-shadow: 0 0 40px #00ff00; }
+        #info { text-align: center; margin-top: 15px; font-size: 1.5rem; font-weight: bold; min-height: 1.8em; }
     </style>
 </head>
 <body>
@@ -17,28 +19,39 @@
         <div id="r" class="luz rojo"></div>
         <div id="a" class="luz amarillo"></div>
         <div id="v" class="luz verde"></div>
-        <div id="txt" style="text-align:center; font-size: 1.5rem;">Esperando...</div>
+        <div id="info">Iniciando...</div>
     </div>
 
     <script>
-        function update(val) {
-            document.getElementById('txt').innerText = val + " cm";
-            document.getElementById('r').classList.toggle('active', val < 10);
-            document.getElementById('a').classList.toggle('active', val >= 10 && val <= 30);
-            document.getElementById('v').classList.toggle('active', val > 30);
+        // Función para limpiar luces
+        function apagarTodo() {
+            document.getElementById('r').classList.remove('active');
+            document.getElementById('a').classList.remove('active');
+            document.getElementById('v').classList.remove('active');
         }
 
-        // Esta función se ejecuta cuando Tago envía CUALQUIER cosa
+        // Esta es la función mágica que recibe los datos de TagoIO
         window.TagoIO.onRealtime((data) => {
-            if (!data || data.length === 0) return; // Si llega null o vacío, no hacer nada
-            
-            // Buscar la variable 'distancia' de forma segura
-            const s = data.find(i => i && i.variable === 'distancia');
-            if (s && s.value !== undefined) {
-                update(parseFloat(s.value));
+            // Buscamos la variable 'distancia' en el paquete de datos
+            const list = Array.isArray(data) ? data : [data];
+            const item = list.find(i => i.variable === 'distancia');
+
+            if (item && item.value !== undefined) {
+                const val = parseFloat(item.value);
+                document.getElementById('info').innerText = val + " cm";
+                
+                apagarTodo();
+                if (val < 10) {
+                    document.getElementById('r').classList.add('active');
+                } else if (val >= 10 && val <= 30) {
+                    document.getElementById('a').classList.add('active');
+                } else {
+                    document.getElementById('v').classList.add('active');
+                }
             }
         });
 
+        // Avisamos a TagoIO que el widget está listo para recibir datos
         window.TagoIO.ready();
     </script>
 </body>
