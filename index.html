@@ -1,129 +1,45 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://admin.tago.io/dist/custom-widget.sdk.min.js"></script>
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #1a1a1a; 
-            display: flex; 
-            flex-direction: column;
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0; 
-            overflow: hidden;
-        }
-        .semaforo-container {
-            background-color: #333;
-            padding: 30px;
-            border-radius: 40px;
-            border: 6px solid #444;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            box-shadow: 0 0 30px rgba(0,0,0,0.7);
-        }
-        .luz {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background-color: #111; 
-            transition: all 0.4s ease;
-            border: 3px solid rgba(255,255,255,0.05);
-        }
-        /* Colores encendidos con brillo */
-        .rojo.active { 
-            background-color: #ff0000; 
-            box-shadow: 0 0 40px #ff0000; 
-        }
-        .amarillo.active { 
-            background-color: #ffcc00; 
-            box-shadow: 0 0 40px #ffcc00; 
-        }
-        .verde.active { 
-            background-color: #00ff00; 
-            box-shadow: 0 0 40px #00ff00; 
-        }
-        .info {
-            color: white;
-            text-align: center;
-            margin-top: 15px;
-            background: rgba(0,0,0,0.3);
-            padding: 10px;
-            border-radius: 10px;
-        }
-        #valor-texto { 
-            font-size: 2rem;
-            font-weight: bold; 
-            color: #fff; 
-            display: block;
-        }
-        small { font-size: 1rem; color: #aaa; }
+        body { font-family: Arial; background: #1a1a1a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .semaforo { background: #333; padding: 20px; border-radius: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .luz { width: 60px; height: 60px; border-radius: 50%; background: #111; border: 2px solid #444; }
+        .rojo.active { background: #ff0000; box-shadow: 0 0 20px #ff0000; }
+        .amarillo.active { background: #ffcc00; box-shadow: 0 0 20px #ffcc00; }
+        .verde.active { background: #00ff00; box-shadow: 0 0 20px #00ff00; }
     </style>
 </head>
 <body>
-
-    <div class="semaforo-container">
-        <div id="luz-roja" class="luz rojo"></div>
-        <div id="luz-amarilla" class="luz amarillo"></div>
-        <div id="luz-verde" class="luz verde"></div>
-        
-        <div class="info">
-            <span id="valor-texto">--</span>
-            <small>cm</small>
-        </div>
+    <div class="semaforo">
+        <div id="r" class="luz rojo"></div>
+        <div id="a" class="luz amarillo"></div>
+        <div id="v" class="luz verde"></div>
+        <div id="txt" style="text-align:center; margin-top:10px; font-weight:bold;">Cargando...</div>
     </div>
 
     <script>
-        const luzRoja = document.getElementById('luz-roja');
-        const luzAmarilla = document.getElementById('luz-amarilla');
-        const luzVerde = document.getElementById('luz-verde');
-        const texto = document.getElementById('valor-texto');
-
-        function actualizarSemaforo(valor) {
-            if (isNaN(valor)) return;
-
-            // Actualizar texto numérico
-            texto.innerText = valor.toFixed(1);
-
-            // Apagar todo antes de evaluar
-            luzRoja.classList.remove('active');
-            luzAmarilla.classList.remove('active');
-            luzVerde.classList.remove('active');
-
-            // Lógica de rangos
-            if (valor < 10) {
-                luzRoja.classList.add('active');
-                texto.style.color = "#ff0000";
-            } else if (valor >= 10 && valor <= 30) {
-                luzAmarilla.classList.add('active');
-                texto.style.color = "#ffcc00";
-            } else {
-                luzVerde.classList.add('active');
-                texto.style.color = "#00ff00";
-            }
+        function update(val) {
+            document.getElementById('txt').innerText = val + " cm";
+            document.getElementById('r').classList.toggle('active', val < 10);
+            document.getElementById('a').classList.toggle('active', val >= 10 && val <= 30);
+            document.getElementById('v').classList.toggle('active', val > 30);
         }
 
-        // Iniciar comunicación con TagoIO
-        window.TagoIO.onStart((data) => {
-            const sensor = data.find(item => item.variable === 'distancia');
-            if (sensor) actualizarSemaforo(parseFloat(sensor.value));
-        });
-
-        window.TagoIO.onRealtime((data) => {
-            // TagoIO a veces manda un array o un objeto simple
-            const sensor = Array.isArray(data) 
-                ? data.find(item => item.variable === 'distancia')
-                : (data.variable === 'distancia' ? data : null);
-            
-            if (sensor) actualizarSemaforo(parseFloat(sensor.value));
-        });
-
-        // Forzar aviso de que el widget está listo (Sustituye al botón Run SDK)
-        window.TagoIO.ready();
+        // TRUCO FINAL: Esperar a que TagoIO exista
+        const checkTago = setInterval(() => {
+            if (window.TagoIO && window.TagoIO.onStart) {
+                clearInterval(checkTago);
+                window.TagoIO.onStart(() => { console.log("Listo"); });
+                window.TagoIO.onRealtime((data) => {
+                    const s = data.find(i => i.variable === 'distancia');
+                    if (s) update(parseFloat(s.value));
+                });
+                window.TagoIO.ready();
+            }
+        }, 500);
     </script>
 </body>
 </html>
