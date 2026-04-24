@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <script src="https://admin.tago.io/dist/custom-widget.sdk.min.js"></script>
     <style>
-        body { font-family: Arial; background: #1a1a1a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .semaforo { background: #333; padding: 20px; border-radius: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .luz { width: 60px; height: 60px; border-radius: 50%; background: #111; border: 2px solid #444; }
-        .rojo.active { background: #ff0000; box-shadow: 0 0 20px #ff0000; }
-        .amarillo.active { background: #ffcc00; box-shadow: 0 0 20px #ffcc00; }
-        .verde.active { background: #00ff00; box-shadow: 0 0 20px #00ff00; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .semaforo { background: #333; padding: 30px; border-radius: 30px; border: 4px solid #444; display: flex; flex-direction: column; gap: 20px; }
+        .luz { width: 70px; height: 70px; border-radius: 50%; background: #111; transition: 0.3s; }
+        .rojo.active { background: #ff0000; box-shadow: 0 0 30px #ff0000; }
+        .amarillo.active { background: #ffcc00; box-shadow: 0 0 30px #ffcc00; }
+        .verde.active { background: #00ff00; box-shadow: 0 0 30px #00ff00; }
     </style>
 </head>
 <body>
@@ -17,7 +17,7 @@
         <div id="r" class="luz rojo"></div>
         <div id="a" class="luz amarillo"></div>
         <div id="v" class="luz verde"></div>
-        <div id="txt" style="text-align:center; margin-top:10px; font-weight:bold;">Cargando...</div>
+        <div id="txt" style="text-align:center; font-size: 1.5rem;">Esperando...</div>
     </div>
 
     <script>
@@ -28,18 +28,18 @@
             document.getElementById('v').classList.toggle('active', val > 30);
         }
 
-        // TRUCO FINAL: Esperar a que TagoIO exista
-        const checkTago = setInterval(() => {
-            if (window.TagoIO && window.TagoIO.onStart) {
-                clearInterval(checkTago);
-                window.TagoIO.onStart(() => { console.log("Listo"); });
-                window.TagoIO.onRealtime((data) => {
-                    const s = data.find(i => i.variable === 'distancia');
-                    if (s) update(parseFloat(s.value));
-                });
-                window.TagoIO.ready();
+        // Esta función se ejecuta cuando Tago envía CUALQUIER cosa
+        window.TagoIO.onRealtime((data) => {
+            if (!data || data.length === 0) return; // Si llega null o vacío, no hacer nada
+            
+            // Buscar la variable 'distancia' de forma segura
+            const s = data.find(i => i && i.variable === 'distancia');
+            if (s && s.value !== undefined) {
+                update(parseFloat(s.value));
             }
-        }, 500);
+        });
+
+        window.TagoIO.ready();
     </script>
 </body>
 </html>
