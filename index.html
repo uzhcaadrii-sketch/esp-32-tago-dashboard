@@ -1,34 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://admin.tago.io/dist/custom-widget.sdk.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; background-color: #1a1a1a; color: white; }
-        .box { border: 2px solid #00ff00; display: inline-block; padding: 20px; border-radius: 15px; margin-top: 100px; }
-        #distancia { font-size: 50px; color: #00ff00; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #1a1a1a; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            overflow: hidden;
+        }
+        .semaforo-container {
+            background-color: #333;
+            padding: 30px;
+            border-radius: 40px;
+            border: 6px solid #444;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.7);
+        }
+        .luz {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #111; 
+            transition: all 0.4s ease;
+            border: 3px solid rgba(255,255,255,0.05);
+        }
+        /* Colores encendidos con brillo */
+        .rojo.active { 
+            background-color: #ff0000; 
+            box-shadow: 0 0 40px #ff0000; 
+        }
+        .amarillo.active { 
+            background-color: #ffcc00; 
+            box-shadow: 0 0 40px #ffcc00; 
+        }
+        .verde.active { 
+            background-color: #00ff00; 
+            box-shadow: 0 0 40px #00ff00; 
+        }
+        .info {
+            color: white;
+            text-align: center;
+            margin-top: 15px;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        #valor-texto { 
+            font-size: 2rem;
+            font-weight: bold; 
+            color: #fff; 
+            display: block;
+        }
+        small { font-size: 1rem; color: #aaa; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>Nivel del Sensor</h2>
-        <div id="distancia">Cargando...</div>
-        <p>centímetros</p>
+
+    <div class="semaforo-container">
+        <div id="luz-roja" class="luz rojo"></div>
+        <div id="luz-amarilla" class="luz amarillo"></div>
+        <div id="luz-verde" class="luz verde"></div>
+        
+        <div class="info">
+            <span id="valor-texto">--</span>
+            <small>cm</small>
+        </div>
     </div>
 
     <script>
-        // Al iniciar el widget
+        const luzRoja = document.getElementById('luz-roja');
+        const luzAmarilla = document.getElementById('luz-amarilla');
+        const luzVerde = document.getElementById('luz-verde');
+        const texto = document.getElementById('valor-texto');
+
+        function actualizarSemaforo(valor) {
+            if (isNaN(valor)) return;
+
+            // Actualizar texto numérico
+            texto.innerText = valor.toFixed(1);
+
+            // Apagar todo antes de evaluar
+            luzRoja.classList.remove('active');
+            luzAmarilla.classList.remove('active');
+            luzVerde.classList.remove('active');
+
+            // Lógica de rangos
+            if (valor < 10) {
+                luzRoja.classList.add('active');
+                texto.style.color = "#ff0000";
+            } else if (valor >= 10 && valor <= 30) {
+                luzAmarilla.classList.add('active');
+                texto.style.color = "#ffcc00";
+            } else {
+                luzVerde.classList.add('active');
+                texto.style.color = "#00ff00";
+            }
+        }
+
+        // Iniciar comunicación con TagoIO
         window.TagoIO.onStart((data) => {
-            console.log("Conectado con TagoIO");
+            const sensor = data.find(item => item.variable === 'distancia');
+            if (sensor) actualizarSemaforo(parseFloat(sensor.value));
         });
 
-        // Cuando llegan datos en tiempo real del ESP32
         window.TagoIO.onRealtime((data) => {
-            const sensor = data.find(item => item.variable === 'distancia');
-            if (sensor) {
-                document.getElementById('distancia').innerText = sensor.value;
-            }
+            // TagoIO a veces manda un array o un objeto simple
+            const sensor = Array.isArray(data) 
+                ? data.find(item => item.variable === 'distancia')
+                : (data.variable === 'distancia' ? data : null);
+            
+            if (sensor) actualizarSemaforo(parseFloat(sensor.value));
         });
+
+        // Forzar aviso de que el widget está listo (Sustituye al botón Run SDK)
+        window.TagoIO.ready();
     </script>
 </body>
 </html>
